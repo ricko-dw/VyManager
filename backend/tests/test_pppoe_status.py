@@ -5,6 +5,7 @@ from pppoe_status import (
     parse_accel_ppp_sessions,
     parse_interface_mtus,
     parse_pppoe_sessions,
+    parse_rate_limit,
     pppoe_configured,
 )
 import pytest
@@ -378,3 +379,23 @@ def test_load_pppoe_sessions_skips_rest_show_when_graphql_succeeds():
     finally:
         mod.fetch_accel_ppp_sessions = original
         mod.fetch_interface_mtus = original_mtus
+
+
+def test_parse_rate_limit():
+    assert parse_rate_limit(None) == (None, None)
+    assert parse_rate_limit("") == (None, None)
+    assert parse_rate_limit("-") == (None, None)
+    assert parse_rate_limit("10000/5000") == (10000.0, 5000.0)
+    assert parse_rate_limit("10M/5M") == (10_000_000.0, 5_000_000.0)
+    assert parse_rate_limit("10000") == (10000.0, 0.0)
+
+
+def test_session_derives_numeric_rate_limit():
+    session = PPPoESession(interface="ppp0", username="u", state="active", rate_limit="10M/5M")
+    assert session.rate_limit == "10M/5M"
+    assert session.rate_limit_down == 10_000_000.0
+    assert session.rate_limit_up == 5_000_000.0
+
+    empty = PPPoESession(interface="ppp1", username="v", state="active")
+    assert empty.rate_limit_down is None and empty.rate_limit_up is None
+

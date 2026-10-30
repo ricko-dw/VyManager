@@ -288,7 +288,7 @@ async def get_pppoe_sessions(
                 session for session in sessions
                 if needle in " ".join(str(value or "") for value in (
                     session.username, session.interface, session.ip,
-                    session.ipv6, session.calling_sid,
+                    session.ipv6, session.calling_sid, session.rate_limit,
                 )).lower()
             ]
         if min_rx_bytes is not None:
@@ -305,6 +305,11 @@ async def get_pppoe_sessions(
             "username": lambda session: session.username.lower(),
             "interface": lambda session: session.interface.lower(),
             "ip": lambda session: session.ip or "",
+            "rate_limit": lambda session: (
+                session.rate_limit_down is not None,
+                session.rate_limit_down or 0.0,
+                session.rate_limit_up or 0.0,
+            ),
             "rx_bytes": lambda session: session.rx_bytes,
             "tx_bytes": lambda session: session.tx_bytes,
             "mtu": lambda session: session.mtu or 0,

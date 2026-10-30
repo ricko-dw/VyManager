@@ -168,6 +168,8 @@ export interface PPPoESession {
   ipv6_delegated?: string | null;
   calling_sid?: string | null;
   rate_limit?: string | null;
+  rate_limit_down?: number | null;
+  rate_limit_up?: number | null;
   state: string;
   uptime?: string | null;
   rx_bytes: number;

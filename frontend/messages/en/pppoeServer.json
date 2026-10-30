@@ -84,6 +84,7 @@
     "uptime": "Uptime",
     "rxRate": "RX rate (upload)",
     "txRate": "TX rate (download)",
+    "rateLimit": "Rate limit",
     "rxBytes": "RX total (upload)",
     "txBytes": "TX total (download)",
     "labels": "Labels"

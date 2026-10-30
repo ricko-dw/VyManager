@@ -138,6 +138,7 @@ const PPPOE_SESSION_COLUMNS: ColumnDef[] = [
   { id: "uptime", label: "Uptime" },
   { id: "rxRate", label: "RX rate (upload)" },
   { id: "txRate", label: "TX rate (download)" },
+  { id: "rateLimit", label: "Rate limit" },
   { id: "rx_bytes", label: "RX total (upload)" },
   { id: "tx_bytes", label: "TX total (download)" },
   { id: "labels", label: "Labels" },
@@ -199,6 +200,7 @@ function PPPoEPageInner() {
     uptime: t("sessionColumns.uptime"),
     rxRate: t("sessionColumns.rxRate"),
     txRate: t("sessionColumns.txRate"),
+    rateLimit: t("sessionColumns.rateLimit"),
     rx_bytes: t("sessionColumns.rxBytes"),
     tx_bytes: t("sessionColumns.txBytes"),
     labels: t("sessionColumns.labels"),
@@ -770,6 +772,7 @@ function PPPoEPageInner() {
                                 if (column.id === "mtu") return <TableCell key={column.id}>{session.mtu || "-"}</TableCell>;
                                 if (column.id === "calling_sid") return <TableCell key={column.id} className="font-mono text-xs">{session.calling_sid || "-"}</TableCell>;
                                 if (column.id === "uptime") return <TableCell key={column.id}>{session.uptime || "-"}</TableCell>;
+                                if (column.id === "rateLimit") return <TableCell key={column.id}>{session.rate_limit || "-"}</TableCell>;
                                 if (column.id === "rxRate") return <TableCell key={column.id}>{formatRate(session.rxRate)} <span className="text-xs text-muted-foreground">/ {formatPps(session.rxPps)}</span></TableCell>;
                                 if (column.id === "txRate") return <TableCell key={column.id}>{formatRate(session.txRate)} <span className="text-xs text-muted-foreground">/ {formatPps(session.txPps)}</span></TableCell>;
                                 if (column.id === "rx_bytes") return <TableCell key={column.id} className="text-right whitespace-nowrap">{formatBytes(session.rx_bytes)} RX</TableCell>;
@@ -1646,6 +1649,7 @@ type SessionSortField =
   | "uptime"
   | "rxRate"
   | "txRate"
+  | "rateLimit"
   | "rx_bytes"
   | "tx_bytes";
 
@@ -1674,6 +1678,11 @@ function sessionValue(session: SessionWithRates, field: SessionSortField): strin
       return session.rxRate ?? 0;
     case "txRate":
       return session.txRate ?? 0;
+    case "rateLimit":
+      // Download first, then upload; sessions without a limit sort lowest.
+      return session.rate_limit_down == null
+        ? -1
+        : session.rate_limit_down * 1e12 + (session.rate_limit_up ?? 0);
     case "rx_bytes":
       return session.rx_bytes ?? 0;
     case "tx_bytes":

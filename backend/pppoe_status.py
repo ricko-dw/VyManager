@@ -19,7 +19,7 @@ import time
 from typing import Any, Dict, List, Optional
 
 import httpx
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 from starlette.concurrency import run_in_threadpool
 
@@ -42,6 +42,8 @@ class PPPoESession(BaseModel):
     ipv6_delegated: Optional[str] = None
     calling_sid: Optional[str] = None
     rate_limit: Optional[str] = None
+    rate_limit_down: Optional[float] = None
+    rate_limit_up: Optional[float] = None
     state: str
     uptime: Optional[str] = None
     rx_bytes: int = 0
@@ -51,6 +53,12 @@ class PPPoESession(BaseModel):
     rx_pps: Optional[float] = None
     tx_pps: Optional[float] = None
     mtu: Optional[int] = None
+
+    @model_validator(mode="after")
+    def _derive_rate_limit_values(self) -> "PPPoESession":
+        if self.rate_limit_down is None and self.rate_limit_up is None:
+            self.rate_limit_down, self.rate_limit_up = parse_rate_limit(self.rate_limit)
+        return self
 
 
 class PPPoESessionsResponse(BaseModel):
@@ -181,6 +189,44 @@ def _parse_int_like(value: Any) -> Optional[int]:
         return int(text)
     except ValueError:
         return None
+
+
+def parse_rate_unit(text: str) -> float:
+    """Parse a rate limit component (e.g. '10000', '10M', '500K') into a numeric value."""
+    text = text.strip()
+    if not text:
+        return 0.0
+    num_str = ""
+    unit_multiplier = 1.0
+    for ch in text:
+        if ch.isdigit() or ch == ".":
+            num_str += ch
+        elif ch.upper() == "K":
+            unit_multiplier = 1_000.0
+            break
+        elif ch.upper() == "M":
+            unit_multiplier = 1_000_000.0
+            break
+        elif ch.upper() == "G":
+            unit_multiplier = 1_000_000_000.0
+            break
+    try:
+        return float(num_str) * unit_multiplier if num_str else 0.0
+    except ValueError:
+        return 0.0
+
+
+def parse_rate_limit(rate_limit: Optional[str]) -> tuple[Optional[float], Optional[float]]:
+    """Split a rate limit string (e.g. '10000/5000', '10M/5M') into (download, upload).
+
+    Returns ``(None, None)`` when the value is empty or ``-``.
+    """
+    if not rate_limit or str(rate_limit).strip() in ("", "-"):
+        return None, None
+    parts = str(rate_limit).strip().split("/")
+    down = parse_rate_unit(parts[0])
+    up = parse_rate_unit(parts[1]) if len(parts) > 1 else 0.0
+    return down, up
 
 
 def _format_uptime(seconds: Optional[str]) -> Optional[str]:

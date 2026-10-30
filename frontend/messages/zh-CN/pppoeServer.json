@@ -84,6 +84,7 @@
     "uptime": "在线时长",
     "rxRate": "RX 速率（上传）",
     "txRate": "TX 速率（下载）",
+    "rateLimit": "速率限制",
     "rxBytes": "RX 总量（上传）",
     "txBytes": "TX 总量（下载）",
     "labels": "标签"
